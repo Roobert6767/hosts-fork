@@ -1,5 +1,21 @@
 #!/bin/bash
 
+verifica_ip() {
+    local nume="$1"
+    local ip="$2"
+    local dns_server="$3"
+
+    local dns_ips
+    dns_ips=$(nslookup "$nume" "$dns_server" 2>/dev/null | awk '/^Address: / {print $2}')
+
+    if [[ -n "$dns_ips" ]] && ! echo "$dns_ips" | grep -qw "$ip"; then
+        return 1
+    fi
+    return 0
+}
+
+DNS_SERVER="8.8.8.8"
+
 cat /etc/hosts | while read -r ip nume rest; do
     if [[ -z "$ip" || "$ip" == \#* ]]; then
         continue
@@ -9,9 +25,7 @@ cat /etc/hosts | while read -r ip nume rest; do
         continue
     fi
 
-    dns_ips=$(nslookup "$nume" 8.8.8.8 2>/dev/null | awk '/^Address: / {print $2}')
-
-    if [[ -n "$dns_ips" ]] && ! echo "$dns_ips" | grep -qw "$ip"; then
+    if ! verifica_ip "$nume" "$ip" "$DNS_SERVER"; then
         echo "Bogus IP for $nume in /etc/hosts!"
     fi
 done
